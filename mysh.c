@@ -1,10 +1,13 @@
+// include statements
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+// macros
 #define STD_LINE_BUFFER 1024
 #define STD_TOKEN_BUFFER 64
 
-char* readLine() { // function for reading the current line
+// function for reading the current line
+char* readLine() {
 
     int curBufferSize = STD_LINE_BUFFER;
     char* line = malloc(sizeof(char) * curBufferSize);
@@ -22,7 +25,6 @@ char* readLine() { // function for reading the current line
 
         if (cur == EOF || cur == '\n') { // base case
             line[pos] = '\0';
-            printf("sizeof(line) in function: %i\n", sizeof(line));
             return line;
         } else { // continuation
             line[pos] = cur;
@@ -41,10 +43,10 @@ char* readLine() { // function for reading the current line
     }
 }
 
+// function for splitting line into tokens
 char** splitLine(char* line) {
 
     int curBufferSize = STD_TOKEN_BUFFER;
-//    printf("curBufferSize: %i\n", curBufferSize);
     char** tokens = malloc(sizeof(char*) * curBufferSize); // array of tokens
     char* curToken; // pointer for current token
     const char delim[2] = " ";
@@ -59,11 +61,9 @@ char** splitLine(char* line) {
     while (curToken != NULL) {
         tokens[pos] = curToken;
         pos++;
-    //    printf("pos: %i\n", pos);
 
         if (pos >= curBufferSize) {
             curBufferSize += STD_TOKEN_BUFFER;
-            printf("curBufferSize: %i\n", curBufferSize);
             realloc(tokens, sizeof(char*) * curBufferSize);
             if (!tokens) {
                 printf("Error: realloc of tokens.");
@@ -71,10 +71,15 @@ char** splitLine(char* line) {
         }
         curToken = strtok(NULL, delim);
     }
-    tokens[pos] = NULL;
+    tokens[pos] = NULL; // ends the array with a null pointer
     return tokens;
 }
 
+int execute(char** tokens) {
+
+}
+
+// batch mode
 void batchMode(char file[]) {
 
 }
@@ -84,21 +89,14 @@ void interactiveMode() {
 
     char *line;
     char **tokens;
-    int status = 1;
+    int status;
 
     do {
 
         printf("mysh>"); // prompt
         line = readLine(); // reads the current line
         tokens = splitLine(line); // splits the line into separate tokens
-    //    status = execute(tokens);
-
-        printf("sizeof(line) in main: %i\n", sizeof(line));
-        printf("sizeof(char*): %i\n", sizeof(char*));
-
-        for (int i = 0; i < sizeof(tokens); i++) {
-            printf("%s\n", tokens[i]);
-        }
+        status = execute(tokens);
 
         free(line);
         free(tokens);
@@ -118,6 +116,7 @@ int main(int argc, char** argv) {
 
     } else { // interactive mode
 
+        printf("Welcome to my shell!\n");
         interactiveMode();
 
     }
