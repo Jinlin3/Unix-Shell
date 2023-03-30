@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <errno.h>
 // macros
 #define STD_LINE_BUFFER 1024
 #define STD_TOKEN_BUFFER 64
@@ -16,7 +17,7 @@ char* readLine() {
     char cur;
 
     if (!line) { // checks for error
-        printf("Error with Buffer.\n");
+        printf("malloc(line) has failed.\n");
         exit(EXIT_FAILURE);
     }
 
@@ -37,7 +38,7 @@ char* readLine() {
             line = realloc(line, sizeof(char) * curBufferSize);
 
             if (!line) { // checks for error
-                printf("Error: realloc of line.\n");
+                printf("realloc(line) has failed.\n");
                 exit(EXIT_FAILURE);
             }
         }
@@ -54,7 +55,7 @@ char** splitLine(char* line) {
     char delim[] = " ";
 
     if (!tokens) {
-        printf("Error initializing tokens.");
+        printf("initializing(tokens) has failed.\n");
         exit(EXIT_FAILURE);
     }
 
@@ -67,7 +68,7 @@ char** splitLine(char* line) {
             curBufferSize += STD_TOKEN_BUFFER;
             tokens = realloc(tokens, curBufferSize * sizeof(char*));
             if (!tokens) {
-                printf("Error with realloc.");
+                printf("realloc has failed.\n");
                 exit(EXIT_FAILURE);
             }
         }
@@ -77,19 +78,47 @@ char** splitLine(char* line) {
     return tokens;
 }
 
+// change cd to linux style once testing is over
+
 void command(char** tokens) {
 
-    char* firstToken = tokens[0];
+    int pos = 0;
+    char* firstToken = tokens[pos];
 
     if (strcmp(firstToken, "cd") == 0) { // cd
 
-        printf("cd command\n");
+        if (tokens[pos+1] == NULL) { // "cd" | home directory
+            chdir("/home");
+            if (chdir("/home") == -1) {
+                printf("chdir has failed.\n");
+            }
+        } else if (tokens[pos+1][0] == '/' || tokens[pos+1][0] == '\\') { // "cd /..." | indicates the path
+            printf("newDir: %s\n", tokens[pos+1]);
+            chdir(tokens[pos+1]);
+            if (chdir(tokens[pos+1]) == -1) {
+                printf("chdir has failed.\n");
+                if (errno == ENOENT) {
+                printf("path not found.\n");
+                }
+            }
+        } else {
+            printf("cd : Cannot change directory to '%s' because it does not exist.\n", tokens[pos+1]);
+        }
 
     } else if (strcmp(firstToken, "pwd") == 0) { // pwd
 
         char cwd[1024];
-        getcwd(cwd, sizeof(cwd));
+
+        if (getcwd(cwd, sizeof(cwd)) == NULL) {
+            printf("pwd has failed.\n");
+            exit(EXIT_FAILURE);
+        }
+
         printf("Current Working Directory: %s\n", cwd);
+
+    } else if (strcmp(firstToken, "ls") == 0) { // ls
+    
+
 
     } else {
 
@@ -133,7 +162,7 @@ void interactiveMode() {
 
     do {
 
-        printf("mysh>"); // prompt
+        printf("mysh> "); // prompt
         line = readLine(); // reads the current line
 
         tokens = splitLine(line); // splits the line into separate tokens
@@ -158,7 +187,7 @@ int main(int argc, char** argv) {
 
     } else { // interactive mode
 
-        printf("Welcome to my shell!\n");
+        printf("WELCOME TO MY SHELL\n");
         interactiveMode();
 
     }
