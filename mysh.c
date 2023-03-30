@@ -4,6 +4,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
+#include <unistd.h>
 // macros
 #define STD_LINE_BUFFER 1024
 #define STD_TOKEN_BUFFER 64
@@ -116,15 +117,33 @@ void command(char** tokens) {
 
         printf("Current Working Directory: %s\n", cwd);
 
+    } else if (strcmp(firstToken, "exit") == 0) { // exit
+    
+        printf("mysh: exiting\n");
+        exit(EXIT_SUCCESS);
+
     } else if (strcmp(firstToken, "ls") == 0) { // ls
     
+        // code for ls
 
+    } else if (strcmp(firstToken, "echo") == 0) { // echo
+        
+        // code for echo
 
-    } else {
+    } else { // typos for commands (usually)
 
-        printf("will search for file in directories\n");
+        printf("%s : The term '%s' is not recognized as a built-in command.\n", firstToken, firstToken);
 
     }
+    return;
+}
+
+void launch(char** tokens) { // launches applications
+
+    char firstArg[STD_LINE_BUFFER] = ".";
+    strcat(firstArg, tokens[0]);
+    char* args[] = {firstArg, NULL};
+    execv(args[0], args);
     return;
 
 }
@@ -133,14 +152,13 @@ int execute(char** tokens) {
 
     char* firstToken = tokens[0];
     
-    if (firstToken[0] == '/') {
-
-        printf("%s is a path to an executable program!\n", firstToken);
-
-    } else {
+    if (firstToken[0] != '/') { // commands
 
         command(tokens);
-        // Handle cd and pwd commands
+
+    } else { // executables (start with a slash)
+
+        launch(tokens);
 
     }
 
