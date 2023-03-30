@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <unistd.h>
+#include <sys/wait.h>
 // macros
 #define STD_LINE_BUFFER 1024
 #define STD_TOKEN_BUFFER 64
@@ -140,10 +141,20 @@ void command(char** tokens) {
 
 void launch(char** tokens) { // launches applications
 
-    char firstArg[STD_LINE_BUFFER] = ".";
-    strcat(firstArg, tokens[0]);
-    char* args[] = {firstArg, NULL};
-    execv(args[0], args);
+    int id;
+    int status;
+
+    id = fork();
+    if (id == 0) { // child process
+        if (execv(tokens[0], tokens) == -1) {
+            printf("could not run %s.\n", tokens[0]);
+        }
+    } else if (id < 0) { //
+        printf("error forking.\n");
+    } else {
+        wait();
+    }
+
     return;
 
 }
