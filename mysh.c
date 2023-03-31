@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <sys/stat.h>
 // macros
 #define STD_LINE_BUFFER 1024
 #define STD_TOKEN_BUFFER 64
@@ -19,7 +20,7 @@ char* readLine() {
     char cur;
 
     if (!line) { // checks for error
-        printf("malloc(line) has failed.\n");
+        printf("error: malloc(line) has failed.\n");
         exit(EXIT_FAILURE);
     }
 
@@ -40,7 +41,7 @@ char* readLine() {
             line = realloc(line, sizeof(char) * curBufferSize);
 
             if (!line) { // checks for error
-                printf("realloc(line) has failed.\n");
+                printf("error: realloc(line) has failed.\n");
                 exit(EXIT_FAILURE);
             }
         }
@@ -57,7 +58,7 @@ char** splitLine(char* line) {
     char delim[] = " ";
 
     if (!tokens) {
-        printf("initializing(tokens) has failed.\n");
+        printf("error: initializing(tokens) has failed.\n");
         exit(EXIT_FAILURE);
     }
 
@@ -70,7 +71,7 @@ char** splitLine(char* line) {
             curBufferSize += STD_TOKEN_BUFFER;
             tokens = realloc(tokens, curBufferSize * sizeof(char*));
             if (!tokens) {
-                printf("realloc has failed.\n");
+                printf("error: realloc has failed.\n");
                 exit(EXIT_FAILURE);
             }
         }
@@ -82,7 +83,7 @@ char** splitLine(char* line) {
 
 // change cd to linux style once testing is over
 
-void command(char** tokens) {
+int command(char** tokens) {
 
     int pos = 0;
     char* firstToken = tokens[pos];
@@ -92,19 +93,22 @@ void command(char** tokens) {
         if (tokens[pos+1] == NULL) { // "cd" | home directory
             chdir("/home");
             if (chdir("/home") == -1) {
-                printf("chdir has failed.\n");
+                printf("error: chdir has failed.\n");
+                return 1;
             }
         } else if (tokens[pos+1][0] == '/' || tokens[pos+1][0] == '\\') { // "cd /..." | indicates the path
             printf("newDir: %s\n", tokens[pos+1]);
             chdir(tokens[pos+1]);
             if (chdir(tokens[pos+1]) == -1) {
-                printf("chdir has failed.\n");
+                printf("error: chdir has failed.\n");
                 if (errno == ENOENT) {
-                printf("path not found.\n");
+                    printf("error: path not found.\n");
+                    return 1;
                 }
             }
         } else {
             printf("cd : Cannot change directory to '%s' because it does not exist.\n", tokens[pos+1]);
+            return 1;
         }
 
     } else if (strcmp(firstToken, "pwd") == 0) { // pwd
@@ -112,7 +116,7 @@ void command(char** tokens) {
         char cwd[1024];
 
         if (getcwd(cwd, sizeof(cwd)) == NULL) {
-            printf("pwd has failed.\n");
+            printf("error: pwd has failed.\n");
             exit(EXIT_FAILURE);
         }
 
@@ -122,6 +126,7 @@ void command(char** tokens) {
     
         printf("mysh: exiting\n");
         exit(EXIT_SUCCESS);
+        return 0;
 
     } else if (strcmp(firstToken, "ls") == 0) { // ls
     
@@ -134,46 +139,64 @@ void command(char** tokens) {
     } else { // typos for commands (usually)
 
         printf("%s : The term '%s' is not recognized as a built-in command.\n", firstToken, firstToken);
+        return 1;
 
     }
-    return;
+    return 0;
 }
 
-void launch(char** tokens) { // launches applications
+int launch(char** tokens) { // launches applications
 
     int id;
     int status;
+    char file[STD_LINE_BUFFER] = ".";
+    char* arg = tokens[0];
+    strcat(file, arg);
+    tokens[0] = file;
 
     id = fork();
     if (id == 0) { // child process
         if (execv(tokens[0], tokens) == -1) {
-            printf("could not run %s.\n", tokens[0]);
+            printf("error: could not run %s.\n", tokens[0]);
+            return 1;
         }
-    } else if (id < 0) { //
-        printf("error forking.\n");
-    } else {
-        wait();
+    } else if (id < 0) { // error creating child process
+        printf("error: could not fork.\n");
+        return 1;
+    } else { // parent process
+        wait(&status);
+        if (status != 0) {
+            printf("error: exit status %d\n", status);
+        }
     }
 
-    return;
+    return 0;
 
 }
 
 int execute(char** tokens) {
 
+    int status = 0;
     char* firstToken = tokens[0];
+    char error[STD_LINE_BUFFER];
     
     if (firstToken[0] != '/') { // commands
 
-        command(tokens);
+        status = command(tokens);
 
     } else { // executables (start with a slash)
 
-        launch(tokens);
+        status = launch(tokens);
 
     }
 
-    return 1;
+    if (status == 1) { // if error has occurred above, then check the directories with stat()
+
+
+
+    }
+
+    return status;
 
 }
 
@@ -187,11 +210,16 @@ void interactiveMode() {
 
     char *line;
     char **tokens;
-    int status;
+    int status = 0;
 
     do {
 
-        printf("mysh> "); // prompt
+        if (status == 0) {
+            printf("mysh> ");
+        } else {
+            printf("!mysh> ");
+        }
+
         line = readLine(); // reads the current line
 
         tokens = splitLine(line); // splits the line into separate tokens
@@ -201,7 +229,7 @@ void interactiveMode() {
         free(line);
         free(tokens);
 
-    } while (status);
+    } while (1);
 
 }
 
