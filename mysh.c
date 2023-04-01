@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 // macros
 #define STD_LINE_BUFFER 1024
 #define STD_TOKEN_BUFFER 64
@@ -138,7 +139,6 @@ int command(char** tokens) {
 
     } else { // typos for commands (usually)
 
-        printf("%s : The term '%s' is not recognized as a built-in command.\n", firstToken, firstToken);
         return 1;
 
     }
@@ -157,16 +157,15 @@ int launch(char** tokens) { // launches applications
     id = fork();
     if (id == 0) { // child process
         if (execv(tokens[0], tokens) == -1) {
-            printf("error: could not run %s.\n", tokens[0]);
             return 1;
         }
     } else if (id < 0) { // error creating child process
-        printf("error: could not fork.\n");
+        printf("error: could not fork in launch().\n");
         return 1;
     } else { // parent process
         wait(&status);
         if (status != 0) {
-            printf("error: exit status %d\n", status);
+            printf("error: exit status %d in launch()\n", status);
         }
     }
 
@@ -192,8 +191,50 @@ int execute(char** tokens) {
 
     if (status == 1) { // if error has occurred above, then check the directories with stat()
 
+        struct stat sfile;
+        char errorMsg[STD_LINE_BUFFER];
+        char successMsg[STD_LINE_BUFFER];
+        char cwd[STD_LINE_BUFFER];
+        char* dir; // saves directory that file is in
+        getcwd(cwd, sizeof(cwd));
 
+        chdir("/usr/local/sbin");
+        if (stat(firstToken, &sfile) == 0 && status == 1) {
+            getcwd(dir, sizeof(dir));
+            status = 0;
+        }
+        chdir("/usr/local/bin");
+        if (stat(firstToken, &sfile) == 0 && status == 1) {
+            getcwd(dir, sizeof(dir));
+            status = 0;
+        }
+        chdir("/usr/sbin");
+        if (stat(firstToken, &sfile) == 0 && status == 1) {
+            getcwd(dir, sizeof(dir));
+            status = 0;
+        }
+        chdir("/usr/bin");
+        if (stat(firstToken, &sfile) == 0 && status == 1) {
+            getcwd(dir, sizeof(dir));
+            status = 0;
+        }
+        chdir("/sbin");
+        if (stat(firstToken, &sfile) == 0 && status == 1) {
+            getcwd(dir, sizeof(dir));
+            status = 0;
+        }
+        chdir("/bin");
+        if (stat(firstToken, &sfile) == 0 && status == 1) {
+            getcwd(dir, sizeof(dir));
+            status = 0;
+        }
 
+        if (status == 1) {
+            printf("'%s' is not recognized as a build-in command, operable program, or file.\n", firstToken);
+        } else {
+            printf("'%s' found in directory '%s'\n", firstToken, dir);
+        }
+        chdir(cwd);
     }
 
     return status;
