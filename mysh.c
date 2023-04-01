@@ -129,13 +129,16 @@ int command(char** tokens) {
         exit(EXIT_SUCCESS);
         return 0;
 
-    } else if (strcmp(firstToken, "ls") == 0) { // ls
-    
-        // code for ls
-
     } else if (strcmp(firstToken, "echo") == 0) { // echo
         
-        // code for echo
+        if (tokens[pos+1] != NULL) {
+            
+            for(int i = 1; tokens[i] != NULL; i++) {
+                printf("%s ", tokens[i]);
+            }
+            printf("\n");
+
+        }
 
     } else { // typos for commands (usually)
 
